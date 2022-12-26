@@ -791,7 +791,26 @@ try {
             # Special thanks to Ben Hopper (tw:@BenHopperAU) for helping me solve the $null trauma.
 
             $DeviceHardware = Get-DeviceHardware $DeviceID
-            $DeviceHardware = $DeviceHardware.hardwareInformation | Select-Object -Property osBuildNumber,operatingSystemLanguage,operatingSystemEdition,ipAddressV4,subnetAddress,phoneNumber,subscriberCarrier,cellularTechnology,imei
+            $DeviceHardware = $DeviceHardware.hardwareInformation | Select-Object -Property osBuildNumber,operatingSystemLanguage,operatingSystemEdition,ipAddressV4,wiredIPv4Addresses,subnetAddress,phoneNumber,subscriberCarrier,cellularTechnology,imei
+            
+            # Convert collection to string
+            $DeviceHardwareWiredIpV4 = $DeviceHardware.wiredIPv4Addresses
+            if ($DeviceHardwareWiredIpV4.count -gt 0) {
+                
+                $ipV4 = ""
+                
+                foreach ($ip in $DeviceHardwareWiredIpV4) {
+                    if ($ipV4 -ne "") { $ipV4 +=", "}
+                    $ipV4 += $ip
+                
+                }
+
+                $DeviceHardwareWiredIpV4 = $ipV4
+
+            }
+            else {
+                $DeviceHardwareWiredIpV4 = ""
+            }
 
             $EnrolledTime = [datetimeoffset]::Parse($EDT)
             $TimeDifference = $CurrentTime - $EnrolledTime
@@ -857,7 +876,7 @@ try {
             'OperatingSystem'=$Device.operatingSystem;'OsSku'=$Device.skuFamily;'DeviceType'=$Device.deviceType;'DeviceChassis'=$Device.chassisType;'LastSyncDateTime'=$Device.lastSyncDateTime;'EnrolledDateTime'=$Device.enrolledDateTime;
             'JailBroken'=$Device.jailbroken;'ComplianceState'=$Device.complianceState;'EnrollmentType'=$Device.deviceEnrollmentType;'AADregistered'=$Device.aadRegistered;'DeviceGroups'=$deviceAdGroups;'DeviceEnabled'=$DeviceInfo.accountEnabled;
             'DeviceDisplayName'=$DeviceInfo.displayName;'DeviceManufacturer'=$DeviceInfo.manufacturer;'DeviceModel'=$Device.model;'DeviceOS'=$DeviceInfo.operatingSystem;'DeviceOSversion'=$DeviceInfo.operatingSystemVersion;'DeviceOSbuild'=$DeviceHardware.osBuildNumber;
-            'DeviceOSEdition'=$DeviceHardware.operatingSystemEdition;'DeviceOSlanguage'=$DeviceHardware.operatingSystemLanguage;'DeviceIpV4'=$DeviceHardware.ipAddressV4;'DeviceSubnet'=$DeviceHardware.subnetAddress;
+            'DeviceOSEdition'=$DeviceHardware.operatingSystemEdition;'DeviceOSlanguage'=$DeviceHardware.operatingSystemLanguage;'DeviceIpV4'=$DeviceHardware.ipAddressV4;'DeviceWiredIpV4'=$DeviceHardwareWiredIpV4;'DeviceSubnet'=$DeviceHardware.subnetAddress;
             'DevicePhoneNumber'=$Device.phoneNumber;'DeviceCarrier'=$DeviceHardware.subscriberCarrier;'DeviceCellTechnology'=$DeviceHardware.cellularTechnology;'AzureUserId'=$AzUserId;'UserGroups'=$userAdGroups;
             'UserEnabled'=$userInfo.accountEnabled;'UserDisplayName'=$userInfo.displayName;'UserCompany'=$userInfo.companyName;'UserCountry'=$userInfo.country;'UserCity'=$userInfo.city;'UserUsageLocation'=$userInfo.usageLocation}
 
@@ -877,7 +896,7 @@ try {
                     #Export to file
                     $Results | Select-Object DeviceName,AzureDeviceId,IntuneDeviceId,DeviceOwnerType,ManagementState,ManagementAgent,EnrolledProfile,OperatingSystem,OsSku,DeviceType,DeviceChassis,LastSyncDateTime,EnrolledDateTime,
                     Jailbroken,ComplianceState,EnrollmentType,AADregistered,DeviceGroups,DeviceEnabled,DeviceDisplayName,DeviceManufacturer,DeviceModel,DeviceOS,DeviceOSversion,DeviceOSbuild,DeviceOSEdition,DeviceOSlanguage,
-                    DeviceIpV4,DeviceSubnet,DevicePhoneNumber,DeviceCarrier,DeviceCellTechnology,AzureUserId,UserGroups,UserEnabled,UserDisplayName,UserCompany,
+                    DeviceIpV4,DeviceWiredIpV4,DeviceSubnet,DevicePhoneNumber,DeviceCarrier,DeviceCellTechnology,AzureUserId,UserGroups,UserEnabled,UserDisplayName,UserCompany,
                     UserCountry,UserCity,UserUsageLocation | Export-Csv -Path $ExportCSV -Encoding utf8 -Notype -Append
 
                 }
@@ -896,7 +915,7 @@ try {
                 #Export to file
                 $Results | Select-Object DeviceName,AzureDeviceId,IntuneDeviceId,DeviceOwnerType,ManagementState,ManagementAgent,EnrolledProfile,OperatingSystem,OsSku,DeviceType,DeviceChassis,LastSyncDateTime,EnrolledDateTime,
                 Jailbroken,ComplianceState,EnrollmentType,AADregistered,DeviceGroups,DeviceEnabled,DeviceDisplayName,DeviceManufacturer,DeviceModel,DeviceOS,DeviceOSversion,DeviceOSbuild,DeviceOSEdition,DeviceOSlanguage,
-                DeviceIpV4,DeviceSubnet,DevicePhoneNumber,DeviceCarrier,DeviceCellTechnology,AzureUserId,UserGroups,UserEnabled,UserDisplayName,UserCompany,
+                DeviceIpV4,DeviceWiredIpV4,DeviceSubnet,DevicePhoneNumber,DeviceCarrier,DeviceCellTechnology,AzureUserId,UserGroups,UserEnabled,UserDisplayName,UserCompany,
                 UserCountry,UserCity,UserUsageLocation | Export-Csv -Path $ExportCSV -Encoding utf8 -Notype -Append
 
             }
