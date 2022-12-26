@@ -440,6 +440,71 @@ Properties queried:
 }
 
 
+function Get-DeviceHardware ($DeviceId) {
+
+    <#
+    .SYNOPSIS
+    Gets device hardware information for a Device
+    .DESCRIPTION
+
+    Connects to Graph API Interface and gets the following properties for a given device as specified via Intune Device ID as parameter. 
+    Special thanks to Ben Hopper (tw:@BenHopperAU) for guiding me on how to correctly get HW info.
+    
+    Properties queried:
+        - ChassisType
+        - OS BuildNumber
+        - OS Language
+        - IPv4
+        - Subnet
+        - Cellular Technology
+        - IMEI
+        - Others
+    #>
+        
+        if($global:authToken) {
+    
+            if (!($null -eq $DeviceId -or $DeviceId -eq "")) {
+    
+                $graphApiVersion = "beta"
+                $Device_resource = "deviceManagement/managedDevices"
+    
+                try {
+    
+                    $Device_uri = "https://graph.microsoft.com/$graphApiVersion/$($Device_resource)/{$DeviceId}?`$select=hardwareInformation"
+                    $DeviceHwInfo = (Invoke-RestMethod -Uri $Device_uri -Headers $authToken -Method Get)
+    
+                }
+    
+                catch {
+                    
+                    Get-UriCallError $_.Exception $Device_uri "Error while trying to fetch information details for Device $DeviceId"
+    
+                }
+                
+            }
+    
+            else {
+    
+                $DeviceHwInfo = @()
+    
+            }
+    
+    
+            return $DeviceHwInfo
+    
+        }
+    
+        else {
+    
+            $User = Read-Host -Prompt "Please specify your user principal name for Azure Authentication"
+            $global:authToken = Get-AuthToken -User $User
+    
+            
+        }
+    
+    
+    }
+
 
 
 function Get-UserGroups ($azureUserId) {
@@ -719,7 +784,14 @@ try {
             $AzUserId = $Device.userId
             [string]$userAdGroups = ""
 
-            $DeviceHardware = $Device.hardwareInformation | Select-Object -Property osBuildNumber,operatingSystemLanguage,cellularTechnology,imei
+            # Painful query 1 by 1, have to specifically select "hardwareInformation" for each device or it comes out "null"
+            #  Saving this line, might work in the future: 
+            #            $DeviceHardware = $Device.hardwareInformation | Select-Object -Property osBuildNumber,operatingSystemLanguage,operatingSystemEdition,ipAddressV4,subnetAddress,phoneNumber,subscriberCarrier,cellularTechnology,imei
+
+            # Special thanks to Ben Hopper (tw:@BenHopperAU) for helping me solve the $null trauma.
+
+            $DeviceHardware = Get-DeviceHardware $DeviceID
+            $DeviceHardware = $DeviceHardware.hardwareInformation | Select-Object -Property osBuildNumber,operatingSystemLanguage,operatingSystemEdition,ipAddressV4,subnetAddress,phoneNumber,subscriberCarrier,cellularTechnology,imei
 
             $EnrolledTime = [datetimeoffset]::Parse($EDT)
             $TimeDifference = $CurrentTime - $EnrolledTime
@@ -783,12 +855,11 @@ try {
             #Store Device info in table
             $Result = @{'DeviceName'=$Device.deviceName;'AzureDeviceId'=$AzDeviceId;'IntuneDeviceId'=$DeviceID;'DeviceOwnerType'=$Device.managedDeviceOwnerType;'ManagementState'=$Device.managementState;'ManagementAgent'=$Device.managementAgent;'EnrolledProfile'=$Device.enrollmentProfileName;
             'OperatingSystem'=$Device.operatingSystem;'OsSku'=$Device.skuFamily;'DeviceType'=$Device.deviceType;'DeviceChassis'=$Device.chassisType;'LastSyncDateTime'=$Device.lastSyncDateTime;'EnrolledDateTime'=$Device.enrolledDateTime;
-            'JailBroken'=$Device.jailbroken;'ComplianceState'=$Device.complianceState;'EnrollmentType'=$Device.deviceEnrollmentType;'AADregistered'=$Device.aadRegistered;
-            'DeviceGroups'=$deviceAdGroups;'DeviceEnabled'=$DeviceInfo.accountEnabled;'DeviceDisplayName'=$DeviceInfo.displayName;
-            'DeviceManufacturer'=$DeviceInfo.manufacturer;'DeviceOS'=$DeviceInfo.operatingSystem;'DeviceOSversion'=$DeviceInfo.operatingSystemVersion;'DeviceModel'=$Device.model;
-            'DevicePhoneNumber'=$Device.phoneNumber;'DeviceCarrier'=$Device.subscriberCarrier;'DeviceOSbuild'=$DeviceHardware.osBuildNumber;'DeviceOSlanguage'=$DeviceHardware.operatingSystemLanguage;
-            'DeviceCellTechnology'=$DeviceHardware.cellularTechnology;'AzureUserId'=$AzUserId;'UserGroups'=$userAdGroups;'UserEnabled'=$userInfo.accountEnabled;'UserDisplayName'=$userInfo.displayName;
-            'UserCompany'=$userInfo.companyName;'UserCountry'=$userInfo.country;'UserCity'=$userInfo.city;'UserUsageLocation'=$userInfo.usageLocation}
+            'JailBroken'=$Device.jailbroken;'ComplianceState'=$Device.complianceState;'EnrollmentType'=$Device.deviceEnrollmentType;'AADregistered'=$Device.aadRegistered;'DeviceGroups'=$deviceAdGroups;'DeviceEnabled'=$DeviceInfo.accountEnabled;
+            'DeviceDisplayName'=$DeviceInfo.displayName;'DeviceManufacturer'=$DeviceInfo.manufacturer;'DeviceModel'=$Device.model;'DeviceOS'=$DeviceInfo.operatingSystem;'DeviceOSversion'=$DeviceInfo.operatingSystemVersion;'DeviceOSbuild'=$DeviceHardware.osBuildNumber;
+            'DeviceOSEdition'=$DeviceHardware.operatingSystemEdition;'DeviceOSlanguage'=$DeviceHardware.operatingSystemLanguage;'DeviceIpV4'=$DeviceHardware.ipAddressV4;'DeviceSubnet'=$DeviceHardware.subnetAddress;
+            'DevicePhoneNumber'=$DeviceHardware.phoneNumber;'DeviceCarrier'=$DeviceHardware.subscriberCarrier;'DeviceCellTechnology'=$DeviceHardware.cellularTechnology;'AzureUserId'=$AzUserId;'UserGroups'=$userAdGroups;
+            'UserEnabled'=$userInfo.accountEnabled;'UserDisplayName'=$userInfo.displayName;'UserCompany'=$userInfo.companyName;'UserCountry'=$userInfo.country;'UserCity'=$userInfo.city;'UserUsageLocation'=$userInfo.usageLocation}
 
             #Filter for a specific Azure Acite Directory Group. 
             #   Sorry! for sure there should be a better way
@@ -805,8 +876,8 @@ try {
 
                     #Export to file
                     $Results | Select-Object DeviceName,AzureDeviceId,IntuneDeviceId,DeviceOwnerType,ManagementState,ManagementAgent,EnrolledProfile,OperatingSystem,OsSku,DeviceType,DeviceChassis,LastSyncDateTime,EnrolledDateTime,
-                    Jailbroken,ComplianceState,EnrollmentType,AADregistered,DeviceGroups,DeviceEnabled,DeviceDisplayName,DeviceManufacturer,DeviceOS,DeviceOSversion,
-                    DeviceModel,DevicePhoneNumber,DeviceCarrier,DeviceOSbuild,DeviceOSlanguage,DeviceCellTechnology,AzureUserId,UserGroups,UserEnabled,UserDisplayName,UserCompany,
+                    Jailbroken,ComplianceState,EnrollmentType,AADregistered,DeviceGroups,DeviceEnabled,DeviceDisplayName,DeviceManufacturer,DeviceModel,DeviceOS,DeviceOSversion,DeviceOSbuild,DeviceOSEdition,DeviceOSlanguage,
+                    DeviceIpV4,DeviceSubnet,DevicePhoneNumber,DeviceCarrier,DeviceCellTechnology,AzureUserId,UserGroups,UserEnabled,UserDisplayName,UserCompany,
                     UserCountry,UserCity,UserUsageLocation | Export-Csv -Path $ExportCSV -Encoding utf8 -Notype -Append
 
                 }
@@ -824,8 +895,8 @@ try {
 
                 #Export to file
                 $Results | Select-Object DeviceName,AzureDeviceId,IntuneDeviceId,DeviceOwnerType,ManagementState,ManagementAgent,EnrolledProfile,OperatingSystem,OsSku,DeviceType,DeviceChassis,LastSyncDateTime,EnrolledDateTime,
-                Jailbroken,ComplianceState,EnrollmentType,AADregistered,DeviceGroups,DeviceEnabled,DeviceDisplayName,DeviceManufacturer,DeviceOS,DeviceOSversion,
-                DeviceModel,DevicePhoneNumber,DeviceCarrier,DeviceOSbuild,DeviceOSlanguage,DeviceCellTechnology,AzureUserId,UserGroups,UserEnabled,UserDisplayName,UserCompany,
+                Jailbroken,ComplianceState,EnrollmentType,AADregistered,DeviceGroups,DeviceEnabled,DeviceDisplayName,DeviceManufacturer,DeviceModel,DeviceOS,DeviceOSversion,DeviceOSbuild,DeviceOSEdition,DeviceOSlanguage,
+                DeviceIpV4,DeviceSubnet,DevicePhoneNumber,DeviceCarrier,DeviceCellTechnology,AzureUserId,UserGroups,UserEnabled,UserDisplayName,UserCompany,
                 UserCountry,UserCity,UserUsageLocation | Export-Csv -Path $ExportCSV -Encoding utf8 -Notype -Append
 
             }
