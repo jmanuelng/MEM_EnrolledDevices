@@ -858,7 +858,7 @@ try {
             'JailBroken'=$Device.jailbroken;'ComplianceState'=$Device.complianceState;'EnrollmentType'=$Device.deviceEnrollmentType;'AADregistered'=$Device.aadRegistered;'DeviceGroups'=$deviceAdGroups;'DeviceEnabled'=$DeviceInfo.accountEnabled;
             'DeviceDisplayName'=$DeviceInfo.displayName;'DeviceManufacturer'=$DeviceInfo.manufacturer;'DeviceModel'=$Device.model;'DeviceOS'=$DeviceInfo.operatingSystem;'DeviceOSversion'=$DeviceInfo.operatingSystemVersion;'DeviceOSbuild'=$DeviceHardware.osBuildNumber;
             'DeviceOSEdition'=$DeviceHardware.operatingSystemEdition;'DeviceOSlanguage'=$DeviceHardware.operatingSystemLanguage;'DeviceIpV4'=$DeviceHardware.ipAddressV4;'DeviceSubnet'=$DeviceHardware.subnetAddress;
-            'DevicePhoneNumber'=$DeviceHardware.phoneNumber;'DeviceCarrier'=$DeviceHardware.subscriberCarrier;'DeviceCellTechnology'=$DeviceHardware.cellularTechnology;'AzureUserId'=$AzUserId;'UserGroups'=$userAdGroups;
+            'DevicePhoneNumber'=$Device.phoneNumber;'DeviceCarrier'=$DeviceHardware.subscriberCarrier;'DeviceCellTechnology'=$DeviceHardware.cellularTechnology;'AzureUserId'=$AzUserId;'UserGroups'=$userAdGroups;
             'UserEnabled'=$userInfo.accountEnabled;'UserDisplayName'=$userInfo.displayName;'UserCompany'=$userInfo.companyName;'UserCountry'=$userInfo.country;'UserCity'=$userInfo.city;'UserUsageLocation'=$userInfo.usageLocation}
 
             #Filter for a specific Azure Acite Directory Group. 
